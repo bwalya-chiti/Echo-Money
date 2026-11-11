@@ -91,6 +91,7 @@ fun SettingsScreen(
     onExportJson: suspend () -> String,
     onImportJson: suspend (String) -> Boolean,
     onClearAllData: () -> Unit,
+    onToggleDashboardGated: (Boolean) -> Unit,
     onRefreshDiagnostics: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -140,61 +141,86 @@ fun SettingsScreen(
                                 fontSize = 12.sp
                             )
                         }
-                        Switch(
-                            checked = state.isPinConfigured,
-                            onCheckedChange = { checked ->
-                                if (checked) onOpenSetPin() else onDisablePin()
+                    Switch(
+                        checked = state.isPinConfigured,
+                        onCheckedChange = { checked ->
+                            if (checked) onOpenSetPin() else onDisablePin()
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = OffWhite, checkedTrackColor = ElectricIndigo)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Biometric Unlock Switch (Always visible for discoverability)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Biometric Unlock", color = OffWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (!state.isPinConfigured) "Set PIN first to enable"
+                            else when (biometricStatus) {
+                                com.example.security.BiometricStatus.AVAILABLE -> "Fingerprint & Face Recognition"
+                                com.example.security.BiometricStatus.NOT_ENROLLED -> "No fingerprints enrolled on device"
+                                com.example.security.BiometricStatus.NO_HARDWARE -> "Biometric hardware not available"
+                                com.example.security.BiometricStatus.UNAVAILABLE -> "Biometric sensor unavailable"
                             },
-                            colors = SwitchDefaults.colors(checkedThumbColor = OffWhite, checkedTrackColor = ElectricIndigo)
+                            color = if (!state.isPinConfigured) RestrainedRed.copy(alpha = 0.8f) else SubtleGrey,
+                            fontSize = 12.sp
                         )
                     }
+                    Switch(
+                        checked = state.isBiometricConfigured,
+                        enabled = state.isPinConfigured && biometricStatus == com.example.security.BiometricStatus.AVAILABLE,
+                        onCheckedChange = { onToggleBiometrics(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = OffWhite, checkedTrackColor = ElectricIndigo)
+                    )
+                }
 
-                    if (state.isPinConfigured) {
-                        Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                        // Biometric Unlock Switch
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Biometric Unlock", color = OffWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = when (biometricStatus) {
-                                        com.example.security.BiometricStatus.AVAILABLE -> "Fingerprint & Face Recognition"
-                                        com.example.security.BiometricStatus.NOT_ENROLLED -> "No fingerprints enrolled on device"
-                                        com.example.security.BiometricStatus.NO_HARDWARE -> "Biometric hardware not available"
-                                        com.example.security.BiometricStatus.UNAVAILABLE -> "Biometric sensor unavailable"
-                                    },
-                                    color = SubtleGrey,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Switch(
-                                checked = state.isBiometricConfigured,
-                                enabled = biometricStatus == com.example.security.BiometricStatus.AVAILABLE,
-                                onCheckedChange = { onToggleBiometrics(it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = OffWhite, checkedTrackColor = ElectricIndigo)
-                            )
-                        }
+                // Dashboard Gate Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Secure Financial Dashboard", color = OffWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Require authentication to view trends & liquidity",
+                            color = SubtleGrey,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Switch(
+                        checked = state.isDashboardGated,
+                        onCheckedChange = { onToggleDashboardGated(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = OffWhite, checkedTrackColor = ElectricIndigo)
+                    )
+                }
 
-                        Spacer(modifier = Modifier.height(14.dp))
-                        OutlinedButton(
-                            onClick = onOpenSetPin,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ElectricIndigoLight),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderDefault),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Change Security PIN", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
+                if (state.isPinConfigured) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = onOpenSetPin,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ElectricIndigoLight),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorderDefault),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Change Security PIN", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
+        }
 
             // SMS Ingestion Card
             item {

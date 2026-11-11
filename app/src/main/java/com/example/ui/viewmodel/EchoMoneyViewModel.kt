@@ -68,6 +68,8 @@ data class UiState(
     val isPinLocked: Boolean = false,
     val isPinConfigured: Boolean = false,
     val isBiometricConfigured: Boolean = false,
+    val isDashboardGated: Boolean = false,
+    val isSessionAuthenticated: Boolean = false,
     val localBackups: List<com.example.backup.LocalBackupFile> = emptyList(),
     val autoBackupSchedule: String = "DAILY",
     val lastAutoBackupTimestamp: Long? = null,
@@ -95,6 +97,17 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
     private val _backupProgressMessage = MutableStateFlow<String?>(null)
     private val _dailyStatement = MutableStateFlow<DailyFinancialStatement?>(null)
     private val _systemDiagnostics = MutableStateFlow<com.example.data.repository.SystemDiagnostics?>(null)
+    private val _navTarget = MutableStateFlow<String?>(null)
+    private val _isSessionAuthenticated = MutableStateFlow(false)
+    val navTarget = _navTarget.asStateFlow()
+
+    fun setNavTarget(target: String?) {
+        _navTarget.value = target
+    }
+
+    fun clearNavTarget() {
+        _navTarget.value = null
+    }
 
     val uiState: StateFlow<UiState> = combine(
         combine<Any?, StatePackA>(
@@ -141,7 +154,8 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
             _isBackupBusy,
             _backupProgressMessage,
             _dailyStatement,
-            _systemDiagnostics
+            _systemDiagnostics,
+            _isSessionAuthenticated
         ) { args: Array<Any?> ->
             StatePackC(
                 args[0] as String?,
@@ -152,7 +166,8 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
                 args[5] as Boolean,
                 args[6] as String?,
                 args[7] as DailyFinancialStatement?,
-                args[8] as com.example.data.repository.SystemDiagnostics?
+                args[8] as com.example.data.repository.SystemDiagnostics?,
+                args[9] as Boolean
             )
         }
     ) { packA, packB, packC ->
@@ -225,6 +240,8 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
             isPinLocked = packC.locked,
             isPinConfigured = securityManager.isPinEnabled(),
             isBiometricConfigured = securityManager.isBiometricEnabled(),
+            isDashboardGated = securityManager.isDashboardGated(),
+            isSessionAuthenticated = packC.sessionAuthenticated,
             localBackups = packC.localBackups,
             autoBackupSchedule = packC.autoSchedule,
             lastAutoBackupTimestamp = packC.lastAutoTs,
@@ -264,7 +281,8 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
         val isBusy: Boolean,
         val progressMsg: String?,
         val dailyStatement: DailyFinancialStatement?,
-        val diagnostics: com.example.data.repository.SystemDiagnostics?
+        val diagnostics: com.example.data.repository.SystemDiagnostics?,
+        val sessionAuthenticated: Boolean
     )
 
     private fun getPeriodTimeRange(period: FilterPeriod): Pair<Long, Long> {
@@ -648,6 +666,15 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
         showMessage("Security PIN disabled")
     }
 
+    fun setDashboardGated(enabled: Boolean) {
+        securityManager.setDashboardGated(enabled)
+        showMessage(if (enabled) "Dashboard security enabled" else "Dashboard security disabled")
+    }
+
+    fun authenticateSession() {
+        _isSessionAuthenticated.value = true
+    }
+
     init {
         refreshLocalBackups()
         loadAutoBackupSchedule()
@@ -766,6 +793,15 @@ class EchoMoneyViewModel(application: Application) : AndroidViewModel(applicatio
             } else {
                 showMessage("Failed to delete backup")
             }
+        }
+    }
+
+    fun deleteAllLocalBackups() {
+        viewModelScope.launch {
+            val count = _localBackups.value.size
+            _localBackups.value.forEach { backupManager.deleteLocalBackup(it.filePath) }
+            refreshLocalBackups()
+            showMessage("Cleared $count backup snapshots")
         }
     }
 }

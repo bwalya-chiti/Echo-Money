@@ -118,6 +118,7 @@ fun BackupRestoreScreen(
     onInspectBackup: suspend (InputStream, String) -> Result<BackupInspection>,
     onRestoreBackup: (InputStream, String, RestoreMode) -> Unit,
     onDeleteBackup: (String) -> Unit,
+    onDeleteAllLocalBackups: () -> Unit,
     onUpdateAutoBackupSchedule: (String) -> Unit
 ) {
     val context = LocalContext.current

@@ -55,6 +55,8 @@ import com.example.ui.screens.AccountsScreen
 import com.example.ui.screens.AnalyticsScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.PinLockScreen
+import com.example.ui.screens.ReviewCentreScreen
+import com.example.ui.screens.SecurityGateScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.TransactionsScreen
 import com.example.ui.theme.AbsoluteBlack
@@ -74,6 +76,8 @@ enum class NavigationTab(val label: String, val icon: ImageVector) {
     SETTINGS("Settings", androidx.compose.material.icons.Icons.Default.Settings)
 }
 
+private const val SMS_PERMISSION_REQUEST_CODE = 1001
+
 class MainActivity : FragmentActivity() {
 
     private val viewModel: EchoMoneyViewModel by viewModels()
@@ -82,21 +86,66 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        intent?.getStringExtra("target_screen")?.let { viewModel.setNavTarget(it) }
+
         setContent {
             EchoMoneyTheme {
                 MainContent(viewModel = viewModel)
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        val hasReceiveSms = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        viewModel.setSmsPermissionGranted(hasReceiveSms)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("target_screen")?.let { viewModel.setNavTarget(it) }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
+            val hasReceiveSms = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+            viewModel.setSmsPermissionGranted(hasReceiveSms)
+        }
+    }
+}
+
+fun findActivity(context: android.content.Context): FragmentActivity? {
+    var currentContext = context
+    while (currentContext is android.content.ContextWrapper) {
+        if (currentContext is FragmentActivity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
 }
 
 @Composable
 fun MainContent(viewModel: EchoMoneyViewModel) {
     val context = LocalContext.current
+    val activity = remember(context) { findActivity(context) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var currentTab by remember { mutableStateOf(NavigationTab.DASHBOARD) }
+
+    // Handle incoming intent for navigation
+    val navTarget by viewModel.navTarget.collectAsStateWithLifecycle()
+    LaunchedEffect(navTarget) {
+        if (navTarget == "transactions") {
+            currentTab = NavigationTab.TRANSACTIONS
+            viewModel.clearNavTarget()
+        }
+    }
 
     // Dialog states
     var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
@@ -128,7 +177,21 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-        permissionLauncher.launch(permissions.toTypedArray())
+        val permsArray = permissions.toTypedArray()
+        try {
+            permissionLauncher.launch(permsArray)
+        } catch (e: Exception) {
+            // Direct safe fallback using standard request code with only lower 16 bits
+            activity?.let { act ->
+                androidx.core.app.ActivityCompat.requestPermissions(
+                    act,
+                    permsArray,
+                    SMS_PERMISSION_REQUEST_CODE
+                )
+            } ?: run {
+                viewModel.showMessage("Failed to launch permission request: ${e.message}")
+            }
+        }
     }
 
     // Snackbar reaction
@@ -149,9 +212,9 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
             isBiometricEnabled = uiState.isBiometricConfigured,
             onUnlockAttempt = { pin -> viewModel.unlockApp(pin) },
             onBiometricUnlockRequest = {
-                (context as? androidx.fragment.app.FragmentActivity)?.let { activity ->
+                activity?.let { act ->
                     com.example.security.BiometricHelper.authenticate(
-                        activity = activity,
+                        activity = act,
                         onSuccess = { viewModel.unlockWithBiometrics() }
                     )
                 }
@@ -188,6 +251,7 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
             onInspectBackup = { stream, pwd -> viewModel.inspectBackup(stream, pwd) },
             onRestoreBackup = { stream, pwd, mode -> viewModel.restoreBackup(stream, pwd, mode) },
             onDeleteBackup = { path -> viewModel.deleteLocalBackup(path) },
+            onDeleteAllLocalBackups = { viewModel.deleteAllLocalBackups() },
             onUpdateAutoBackupSchedule = { freq -> viewModel.updateAutoBackupSchedule(freq) }
         )
         return
@@ -247,17 +311,48 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
                 .padding(innerPadding)
         ) {
             when (currentTab) {
-                NavigationTab.DASHBOARD -> DashboardScreen(
-                    state = uiState,
-                    onPeriodSelect = { viewModel.setPeriod(it) },
-                    onRequestSmsPermission = { requestPermissions() },
-                    onOpenAddManual = { showAddManual = true },
-                    onOpenReconcile = { reconcileProvider = it },
-                    onSelectTransaction = { selectedTransaction = it },
-                    onNavigateToTransactions = { currentTab = NavigationTab.TRANSACTIONS },
-                    onOpenReviewCentre = { showReviewCentre = true },
-                    onOpenDailyStatement = { showDailyStatement = true }
-                )
+                NavigationTab.DASHBOARD -> {
+                    if (uiState.isDashboardGated && !uiState.isSessionAuthenticated) {
+                        SecurityGateScreen(
+                            title = "Dashboard Protected",
+                            onAuthenticate = {
+                                activity?.let { act ->
+                                    com.example.security.BiometricHelper.authenticate(
+                                        activity = act,
+                                        title = "Reveal Dashboard",
+                                        subtitle = "Authenticate to view financial trends",
+                                        onSuccess = { viewModel.authenticateSession() }
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        DashboardScreen(
+                            state = uiState,
+                            onPeriodSelect = { viewModel.setPeriod(it) },
+                            onRequestSmsPermission = { requestPermissions() },
+                            onOpenAddManual = { showAddManual = true },
+                            onOpenReconcile = { provider ->
+                                if (uiState.isBiometricConfigured) {
+                                    activity?.let { act ->
+                                        com.example.security.BiometricHelper.authenticate(
+                                            activity = act,
+                                            title = "Account Reconciliation",
+                                            subtitle = "Authenticate to modify account baseline",
+                                            onSuccess = { reconcileProvider = provider }
+                                        )
+                                    }
+                                } else {
+                                    reconcileProvider = provider
+                                }
+                            },
+                            onSelectTransaction = { selectedTransaction = it },
+                            onNavigateToTransactions = { currentTab = NavigationTab.TRANSACTIONS },
+                            onOpenReviewCentre = { showReviewCentre = true },
+                            onOpenDailyStatement = { showDailyStatement = true }
+                        )
+                    }
+                }
                 NavigationTab.TRANSACTIONS -> TransactionsScreen(
                     state = uiState,
                     onSearchChange = { viewModel.setSearchQuery(it) },
@@ -266,25 +361,96 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
                     onSortChange = { viewModel.setSortOrder(it) },
                     onSelectTransaction = { selectedTransaction = it }
                 )
-                NavigationTab.ANALYTICS -> AnalyticsScreen(
-                    state = uiState,
-                    onPeriodSelect = { viewModel.setPeriod(it) }
-                )
+                NavigationTab.ANALYTICS -> {
+                    if (uiState.isDashboardGated && !uiState.isSessionAuthenticated) {
+                        SecurityGateScreen(
+                            title = "Analytics Protected",
+                            onAuthenticate = {
+                                activity?.let { act ->
+                                    com.example.security.BiometricHelper.authenticate(
+                                        activity = act,
+                                        title = "Reveal Analytics",
+                                        subtitle = "Authenticate to view spending trends",
+                                        onSuccess = { viewModel.authenticateSession() }
+                                    )
+                                }
+                            }
+                        )
+                    } else {
+                        AnalyticsScreen(
+                            state = uiState,
+                            onPeriodSelect = { viewModel.setPeriod(it) }
+                        )
+                    }
+                }
                 NavigationTab.ACCOUNTS -> AccountsScreen(
                     state = uiState,
-                    onOpenReconcile = { reconcileProvider = it }
+                    onOpenReconcile = { provider ->
+                        if (uiState.isBiometricConfigured) {
+                            activity?.let { act ->
+                                com.example.security.BiometricHelper.authenticate(
+                                    activity = act,
+                                    title = "Account Reconciliation",
+                                    subtitle = "Authenticate to modify account baseline",
+                                    onSuccess = { reconcileProvider = provider }
+                                )
+                            }
+                        } else {
+                            reconcileProvider = provider
+                        }
+                    }
                 )
                 NavigationTab.SETTINGS -> SettingsScreen(
                     state = uiState,
                     onRequestSmsPermission = { requestPermissions() },
                     onOpenSetPin = { showSetPin = true },
                     onDisablePin = { viewModel.disablePin() },
-                    onToggleBiometrics = { viewModel.setBiometricEnabled(it) },
-                    onOpenBackupVault = { showBackupVault = true },
+                    onToggleBiometrics = { enabled ->
+                        if (enabled) {
+                            activity?.let { act ->
+                                com.example.security.BiometricHelper.authenticate(
+                                    activity = act,
+                                    title = "Enable Biometrics",
+                                    subtitle = "Confirm biometric identity to enable",
+                                    onSuccess = { viewModel.setBiometricEnabled(true) }
+                                )
+                            }
+                        } else {
+                            viewModel.setBiometricEnabled(false)
+                        }
+                    },
+                    onOpenBackupVault = {
+                        if (uiState.isBiometricConfigured) {
+                            activity?.let { act ->
+                                com.example.security.BiometricHelper.authenticate(
+                                    activity = act,
+                                    title = "Vault Access",
+                                    subtitle = "Authenticate to open the backup vault",
+                                    onSuccess = { showBackupVault = true }
+                                )
+                            }
+                        } else {
+                            showBackupVault = true
+                        }
+                    },
                     onExportCsv = { viewModel.exportCsv() },
                     onExportJson = { viewModel.exportJson() },
                     onImportJson = { viewModel.importJson(it) },
-                    onClearAllData = { viewModel.clearAllData() }
+                    onToggleDashboardGated = { viewModel.setDashboardGated(it) },
+                    onClearAllData = {
+                        if (uiState.isBiometricConfigured) {
+                            activity?.let { act ->
+                                com.example.security.BiometricHelper.authenticate(
+                                    activity = act,
+                                    title = "Confirm Destruction",
+                                    subtitle = "Authenticate to permanently clear all data",
+                                    onSuccess = { viewModel.clearAllData() }
+                                )
+                            }
+                        } else {
+                            viewModel.clearAllData()
+                        }
+                    }
                 )
             }
         }
