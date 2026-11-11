@@ -55,6 +55,7 @@ import com.example.ui.components.FilterChipItem
 import com.example.ui.components.GlassBox
 import com.example.ui.components.MetricTile
 import com.example.ui.components.ProviderBadge
+import com.example.ui.components.SpendingPatternsDashboardView
 import com.example.ui.theme.AirtelRed
 import com.example.ui.theme.CashTeal
 import com.example.ui.theme.ElectricIndigo
@@ -510,6 +511,14 @@ fun DashboardScreen(
                         }
                     }
                 }
+            }
+
+            // Interactive 30-Day Spending Patterns Dashboard View (D3 / Recharts inspired)
+            item {
+                SpendingPatternsDashboardView(
+                    transactions = state.transactions,
+                    onSelectTransaction = onSelectTransaction
+                )
             }
 
             // Period Selector

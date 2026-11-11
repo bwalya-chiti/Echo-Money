@@ -34,10 +34,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.Transaction
 import com.example.ui.components.AtmosphericGlassBackground
 import com.example.ui.components.FilterChipItem
 import com.example.ui.components.GlassBox
 import com.example.ui.components.MetricTile
+import com.example.ui.components.SpendingPatternsDashboardView
 import com.example.ui.theme.AirtelRed
 import com.example.ui.theme.CashTeal
 import com.example.ui.theme.ElectricIndigo
@@ -61,7 +63,8 @@ import java.util.Locale
 @Composable
 fun AnalyticsScreen(
     state: UiState,
-    onPeriodSelect: (FilterPeriod) -> Unit
+    onPeriodSelect: (FilterPeriod) -> Unit,
+    onSelectTransaction: (Transaction) -> Unit = {}
 ) {
     // Exclude internal transfers and withdrawals from consumption spending
     val spendingTxns = state.filteredTransactions.filter {
@@ -147,6 +150,14 @@ fun AnalyticsScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+            }
+
+            // Interactive 30-Day Category Spending Patterns (D3 / Recharts-inspired Visualizer)
+            item {
+                SpendingPatternsDashboardView(
+                    transactions = state.transactions,
+                    onSelectTransaction = onSelectTransaction
+                )
             }
 
             // Spending Trend Glass Chart

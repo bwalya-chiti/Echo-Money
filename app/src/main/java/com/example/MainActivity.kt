@@ -268,7 +268,8 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
                 )
                 NavigationTab.ANALYTICS -> AnalyticsScreen(
                     state = uiState,
-                    onPeriodSelect = { viewModel.setPeriod(it) }
+                    onPeriodSelect = { viewModel.setPeriod(it) },
+                    onSelectTransaction = { selectedTransaction = it }
                 )
                 NavigationTab.ACCOUNTS -> AccountsScreen(
                     state = uiState,
