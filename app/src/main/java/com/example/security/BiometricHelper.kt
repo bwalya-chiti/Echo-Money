@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
-import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -20,8 +19,7 @@ object BiometricHelper {
 
     fun checkBiometricStatus(context: Context): BiometricStatus {
         val biometricManager = BiometricManager.from(context)
-        val authenticators = BIOMETRIC_STRONG or BIOMETRIC_WEAK or DEVICE_CREDENTIAL
-        return when (biometricManager.canAuthenticate(authenticators)) {
+        return when (biometricManager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
             BiometricManager.BIOMETRIC_SUCCESS -> BiometricStatus.AVAILABLE
             BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricStatus.NOT_ENROLLED
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BiometricStatus.NO_HARDWARE
@@ -37,29 +35,18 @@ object BiometricHelper {
     fun authenticate(
         activity: FragmentActivity,
         title: String = "Unlock Echo Money",
-        subtitle: String = "Authenticate to continue",
-        useDeviceCredentialAsFallback: Boolean = true,
-        negativeButtonText: String? = "Cancel",
+        subtitle: String = "Authenticate with fingerprint or face",
+        negativeButtonText: String = "Use PIN",
         onSuccess: () -> Unit,
         onError: (String) -> Unit = {}
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
-        val authenticators = if (useDeviceCredentialAsFallback) {
-            BIOMETRIC_STRONG or BIOMETRIC_WEAK or DEVICE_CREDENTIAL
-        } else {
-            BIOMETRIC_STRONG or BIOMETRIC_WEAK
-        }
-
-        val promptInfoBuilder = BiometricPrompt.PromptInfo.Builder()
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setAllowedAuthenticators(authenticators)
-
-        if (!useDeviceCredentialAsFallback && negativeButtonText != null) {
-            promptInfoBuilder.setNegativeButtonText(negativeButtonText)
-        }
-
-        val promptInfo = promptInfoBuilder.build()
+            .setNegativeButtonText(negativeButtonText)
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or BIOMETRIC_WEAK)
+            .build()
 
         val biometricPrompt = BiometricPrompt(
             activity,

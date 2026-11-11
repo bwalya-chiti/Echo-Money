@@ -40,24 +40,12 @@ object NotificationHelper {
             }
         }
 
-        val intent = android.content.Intent(context, com.example.MainActivity::class.java).apply {
-            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("target_screen", "transactions")
-        }
-        val pendingIntent = android.app.PendingIntent.getActivity(
-            context,
-            0,
-            intent,
-            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

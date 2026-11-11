@@ -86,18 +86,9 @@ class SecurityManager(context: Context) {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    fun isDashboardGated(): Boolean {
-        return prefs.getBoolean(KEY_DASHBOARD_GATED, false)
-    }
-
-    fun setDashboardGated(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_DASHBOARD_GATED, enabled).apply()
-    }
-
     companion object {
         private const val KEY_PIN_ENABLED = "pin_enabled"
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-        private const val KEY_DASHBOARD_GATED = "dashboard_gated"
     }
 }

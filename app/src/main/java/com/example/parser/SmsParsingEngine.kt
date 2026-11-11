@@ -11,13 +11,18 @@ object SmsParsingEngine {
     }
 
     fun parse(sender: String?, body: String): ParsedTransaction? {
+        // Intelligent Word & Token Identifier Gatekeeper:
+        // Filter out marketing promos, lottery ads, OTPs, and general chatter containing figures
+        if (!TransactionWordClassifier.isValidFinancialTransactionCandidate(sender, body)) {
+            return null
+        }
+
         val detectedProvider = SmsProviderDetector.detectProvider(sender, body)
 
         return when (detectedProvider) {
-            "AIRTEL" -> AirtelSmsParser.parse(body)
-            "MTN" -> MtnSmsParser.parse(body)
+            "AIRTEL" -> AirtelSmsParser.parse(body) ?: MtnSmsParser.parse(body)
+            "MTN" -> MtnSmsParser.parse(body) ?: AirtelSmsParser.parse(body)
             else -> {
-                // Try Airtel first then MTN as fallback
                 AirtelSmsParser.parse(body) ?: MtnSmsParser.parse(body)
             }
         }

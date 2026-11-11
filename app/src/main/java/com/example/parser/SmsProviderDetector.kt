@@ -5,20 +5,20 @@ object SmsProviderDetector {
         val s = (sender ?: "").trim().uppercase()
         val b = body.uppercase()
 
-        // Explicit sender checks
-        if (s.contains("AIRTEL") || s.contains("115")) return "AIRTEL"
-        if (s.contains("MTN") || s.contains("MOMO") || s.contains("303")) return "MTN"
+        // 1. Explicit official sender checks
+        if (s.contains("AIRTEL") || s == "115") return "AIRTEL"
+        if (s.contains("MTN") || s.contains("MOMO") || s == "303") return "MTN"
 
-        // Body content checks
-        if (b.contains("*115#") || b.contains("AIRTEL MONEY") || b.contains("TILL NUMBER MNOWALLET")) {
+        // 2. High-confidence distinctive provider markers in SMS body
+        if (b.contains("AIRTEL MONEY") || b.contains("TILL NUMBER MNOWALLET") || b.contains("*115#") || b.contains("NASOVA")) {
             return "AIRTEL"
         }
-        if (b.contains("YELLO") || b.contains("FINANCIAL TRANSACTION ID") || b.contains("MOBILE MONEY")) {
+        if (b.contains("FINANCIAL TRANSACTION ID") || b.contains("MOMO FROM MTN") || b.contains("YELLO") || b.contains("MOBILE MONEY")) {
             return "MTN"
         }
 
-        // Generic checks for TID and Bal patterns
-        if (b.contains("TID") && (b.contains("BAL IS ZMW") || b.contains("YOUR AVAILABLE BALANCE IS"))) {
+        // 3. Distinctive reference signatures
+        if (b.contains("TID") && (b.contains("BAL IS ZMW") || b.contains("YOUR AVAILABLE BALANCE IS") || b.contains("NEW BALANCE"))) {
             return "AIRTEL"
         }
 

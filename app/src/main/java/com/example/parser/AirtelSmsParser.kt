@@ -21,6 +21,7 @@ object AirtelSmsParser {
             "yyyy-MM-dd'T'HH:mm:ss.SSS",
             "yyyy-MM-dd'T'HH:mm:ss",
             "yyyy-MM-dd",
+            "dd/MM/yyyy HH:mm:ss",
             "dd/MM/yyyy",
             "dd-MM-yyyy"
         )
@@ -91,7 +92,37 @@ object AirtelSmsParser {
             )
         }
 
-        // 3. PAYMENT TO NFS SETTLEMENT TILL
+        // 3. LOAN REPAYMENT AUTO-DEDUCTION
+        // "Your NaSova loan repayment of ZMW 148.00 to FIKILIZA has been processed. New balance: ZMW 102.90. TID: LN261102.1400.P33819"
+        val pLoanRepay = Pattern.compile(
+            "Your\\s+([A-Za-z0-9_]+)?\\s*loan repayment of\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\s*(?:ZMW|K)?\\s*to\\s+([^.]+?)\\s+has been processed\\.?\\s*New balance\\s*:\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\s*(?:ZMW|K)?\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
+            Pattern.CASE_INSENSITIVE
+        )
+        val mLoanRepay = pLoanRepay.matcher(normalized)
+        if (mLoanRepay.find()) {
+            val loanType = mLoanRepay.group(1)?.trim() ?: "Loan"
+            val amountMinor = Money.parseToMinor(mLoanRepay.group(2))
+            val lender = mLoanRepay.group(3)?.trim() ?: "Lender"
+            val balanceMinor = Money.parseToMinor(mLoanRepay.group(4))
+            val tid = cleanReference(mLoanRepay.group(5))
+            return ParsedTransaction(
+                provider = "AIRTEL",
+                transactionType = "LOAN_REPAYMENT",
+                direction = "DEBIT",
+                status = "SUCCESSFUL",
+                categoryName = "Loan Repayment",
+                amountMinor = amountMinor,
+                recipient = "$lender ($loanType Repayment)",
+                merchantOrAgent = lender,
+                description = "Loan repayment of $loanType to $lender",
+                balanceAfterMinor = balanceMinor,
+                transactionReference = tid,
+                rawSms = smsBody,
+                confidence = 1.0f
+            )
+        }
+
+        // 4. PAYMENT TO NFS SETTLEMENT TILL
         // "Payment of ZMW 145.00 Till Number MNOWALLET NFS SETTLEMENT ACCOUNT. Airtel Money bal is ZMW 0.90. TID : MP261101.1131.K33436."
         val pNfsTill = Pattern.compile(
             "Payment of (?:ZMW|K)?\\s*([\\d,.]+)\\s*Till Number\\s+([^.]+?)\\.?\\s*Airtel Money bal is (?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
@@ -121,7 +152,43 @@ object AirtelSmsParser {
             )
         }
 
-        // 4. MONEY SENT (SENT MONEY TO P2P)
+        // 5. UTILITY / BILL / ZESCO PAYMENT WITH TOKEN
+        // "Payment of ZMW 100.00 to ZESCO PREPAID successful. Token: 4920-1192-3381-0029. Fee: ZMW 0.00. Bal: ZMW 150.90. TID: MP261102.1045.Z88102"
+        val pUtilityPayment = Pattern.compile(
+            "Payment of (?:ZMW|K)?\\s*([\\d,.]+)\\s*to\\s+([^.]+?)\\s+successful\\.?\\s*(?:Token\\s*:\\s*([^.]+?)\\.?)?\\s*(?:Fee\\s*:\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\.?)?\\s*Bal\\s*:\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
+            Pattern.CASE_INSENSITIVE
+        )
+        val mUtility = pUtilityPayment.matcher(normalized)
+        if (mUtility.find()) {
+            val amountMinor = Money.parseToMinor(mUtility.group(1))
+            val recipient = mUtility.group(2)?.trim()
+            val token = mUtility.group(3)?.trim()
+            val feeMinor = Money.parseToMinor(mUtility.group(4))
+            val balanceMinor = Money.parseToMinor(mUtility.group(5))
+            val tid = cleanReference(mUtility.group(6))
+            val isUtility = recipient?.contains("ZESCO", ignoreCase = true) == true ||
+                    recipient?.contains("PREPAID", ignoreCase = true) == true ||
+                    recipient?.contains("WATER", ignoreCase = true) == true
+            val desc = token?.let { "Token: $it" } ?: "Bill payment to $recipient"
+            return ParsedTransaction(
+                provider = "AIRTEL",
+                transactionType = "MERCHANT_PAYMENT",
+                direction = "DEBIT",
+                status = "SUCCESSFUL",
+                categoryName = if (isUtility) "Electricity & Utilities" else "Merchant Payment",
+                amountMinor = amountMinor,
+                feeMinor = feeMinor,
+                recipient = recipient,
+                merchantOrAgent = recipient,
+                description = desc,
+                balanceAfterMinor = balanceMinor,
+                transactionReference = tid,
+                rawSms = smsBody,
+                confidence = 0.99f
+            )
+        }
+
+        // 6. MONEY SENT (SENT MONEY TO P2P)
         // "You have sent Money to Bwalya Blessings on 0766313205.Amount K145. Txn. ID : MP261101.1131.K33436.Your available balance is K0.90"
         val pSentMoney = Pattern.compile(
             "You have sent Money to\\s+([^.]+?)\\s+on\\s+([^.]+?)\\.?\\s*Amount\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*Txn\\.?\\s*ID\\s*:\\s*([A-Za-z0-9._]+?)\\.?\\s*Your available balance is (?:ZMW|K)?\\s*([\\d,.]+)",
@@ -153,7 +220,66 @@ object AirtelSmsParser {
             )
         }
 
-        // 5. MONEY RECEIVED
+        // 7. CASH DEPOSIT BY AGENT
+        // "Cash deposit of ZMW 200.00 by Agent LUSAKA CENTRAL BOOTH on 2026-11-02 10:00:00. TID: MP261102.1000.C44910. New balance: ZMW 250.90"
+        val pCashDeposit = Pattern.compile(
+            "Cash deposit of (?:ZMW|K)?\\s*([\\d,.]+)\\s*by Agent\\s+([^.]+?)\\s+on\\s+([^.]+?)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)\\.?\\s*New balance\\s*:\\s*(?:ZMW|K)?\\s*([\\d,.]+)",
+            Pattern.CASE_INSENSITIVE
+        )
+        val mDeposit = pCashDeposit.matcher(normalized)
+        if (mDeposit.find()) {
+            val amountMinor = Money.parseToMinor(mDeposit.group(1))
+            val agent = mDeposit.group(2)?.trim()
+            val dateStr = mDeposit.group(3)?.trim()
+            val tid = cleanReference(mDeposit.group(4))
+            val balanceMinor = Money.parseToMinor(mDeposit.group(5))
+            return ParsedTransaction(
+                provider = "AIRTEL",
+                transactionType = "CASH_DEPOSIT",
+                direction = "CREDIT",
+                status = "SUCCESSFUL",
+                categoryName = "Cash Deposit",
+                amountMinor = amountMinor,
+                sender = "Agent: $agent",
+                merchantOrAgent = agent,
+                balanceAfterMinor = balanceMinor,
+                transactionReference = tid,
+                transactionDate = parseDateString(dateStr),
+                rawSms = smsBody,
+                confidence = 0.99f
+            )
+        }
+
+        // 8. MONEY RECEIVED (WITH SENDER, PHONE/DATE & BALANCE)
+        // "You have received ZMW 50.00 from Chileshe Mwape (0977112233) on 2026-11-02 09:15:20. TID: MP261102.0915.A10293. Balance: ZMW 50.90"
+        val pReceivedDetailed = Pattern.compile(
+            "You have received (?:ZMW|K)?\\s*([\\d,.]+)\\s*from\\s+([^.]+?)\\s+on\\s+([^.]+?)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)\\.?\\s*Balance\\s*:\\s*(?:ZMW|K)?\\s*([\\d,.]+)",
+            Pattern.CASE_INSENSITIVE
+        )
+        val mReceivedDet = pReceivedDetailed.matcher(normalized)
+        if (mReceivedDet.find()) {
+            val amountMinor = Money.parseToMinor(mReceivedDet.group(1))
+            val sender = mReceivedDet.group(2)?.trim()
+            val dateStr = mReceivedDet.group(3)?.trim()
+            val tid = cleanReference(mReceivedDet.group(4))
+            val balanceMinor = Money.parseToMinor(mReceivedDet.group(5))
+            return ParsedTransaction(
+                provider = "AIRTEL",
+                transactionType = "INCOMING_TRANSFER",
+                direction = "CREDIT",
+                status = "SUCCESSFUL",
+                categoryName = "Received Money",
+                amountMinor = amountMinor,
+                sender = sender,
+                balanceAfterMinor = balanceMinor,
+                transactionReference = tid,
+                transactionDate = parseDateString(dateStr),
+                rawSms = smsBody,
+                confidence = 0.99f
+            )
+        }
+
+        // 9. MONEY RECEIVED (GENERIC WITH *115# CHECK)
         // "You have received ZMW 50.00 from John Lungu.Dial *115# to check your new Bal. TID: AT8829104."
         val pReceived = Pattern.compile(
             "You have received (?:ZMW|K)?\\s*([\\d,.]+)\\s*from\\s+([^.]+?)\\.?\\s*Dial \\*115# to check your new Bal\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
@@ -178,7 +304,7 @@ object AirtelSmsParser {
             )
         }
 
-        // 6. MERCHANT PAYMENT
+        // 10. MERCHANT PAYMENT (PAID ... TO ...)
         // "PAID ZMW 10.00 to GLOBAL PAY COLLECTIONS Charge ZMW 0.00, TID AT77281. Bal ZMW 8.22 Date: 27-October-2026"
         val pMerchant = Pattern.compile(
             "PAID (?:ZMW|K)?\\s*([\\d,.]+)\\s*to\\s+([^,]+?)\\s+Charge (?:ZMW|K)?\\s*([\\d,.]+),?\\s*TID\\s*:?\\s*([A-Za-z0-9._]+?)\\.?\\s*Bal (?:ZMW|K)?\\s*([\\d,.]+)\\s*Date:\\s*([^\\n\\r.]+)",
@@ -210,7 +336,7 @@ object AirtelSmsParser {
             )
         }
 
-        // 7. ALTERNATIVE MONEY SENT
+        // 11. ALTERNATIVE MONEY SENT
         // "Money sent to Daudeni Phiri on 28-October-2026.Amount ZMW 75.00. Your bal is ZMW 226.04.TID: AT33819."
         val pAltSent = Pattern.compile(
             "Money sent to\\s+([^.]+?)\\s+on\\s+([^.]+?)\\.?\\s*Amount\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*Your bal is (?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
@@ -239,7 +365,7 @@ object AirtelSmsParser {
             )
         }
 
-        // 8. CASH WITHDRAWAL
+        // 12. CASH WITHDRAWAL
         // "You have withdrawn ZMW 200.00 from KABWE AGENT 04. Bal is ZMW 21.04. TID: AT119284."
         val pWithdraw = Pattern.compile(
             "You have withdrawn (?:ZMW|K)?\\s*([\\d,.]+)\\s*from\\s+([^.]+?)\\.?\\s*Bal is (?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
@@ -267,18 +393,18 @@ object AirtelSmsParser {
             )
         }
 
-        // 9. REVERSAL / REFUND
-        // "Reversal of transaction [TID] has been completed. ZMW [AMOUNT] has been credited back to your Airtel Money account. New balance: ZMW [BALANCE]. Txn ID: [REV_TID]"
-        val pReversal = Pattern.compile(
+        // 13. REVERSAL VARIANT 1 (ORIGINAL TID IN BODY)
+        // "Reversal of transaction MP261101.0843.A95608 has been completed. ZMW 5.00 has been credited back to your Airtel Money account. New balance: ZMW 5.90. Txn ID: RV261101.1200.R12345"
+        val pReversal1 = Pattern.compile(
             "Reversal of transaction\\s+([A-Za-z0-9._]+)\\s+has been completed\\.?\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\s*has been credited back.*?New balance:\\s*(?:ZMW|K)?\\s*([\\d,.]+).*?Txn\\.?\\s*ID:\\s*([A-Za-z0-9._]+)",
             Pattern.CASE_INSENSITIVE
         )
-        val mReversal = pReversal.matcher(normalized)
-        if (mReversal.find()) {
-            val origTid = cleanReference(mReversal.group(1))
-            val amountMinor = Money.parseToMinor(mReversal.group(2))
-            val balanceMinor = Money.parseToMinor(mReversal.group(3))
-            val tid = cleanReference(mReversal.group(4))
+        val mReversal1 = pReversal1.matcher(normalized)
+        if (mReversal1.find()) {
+            val origTid = cleanReference(mReversal1.group(1))
+            val amountMinor = Money.parseToMinor(mReversal1.group(2))
+            val balanceMinor = Money.parseToMinor(mReversal1.group(3))
+            val tid = cleanReference(mReversal1.group(4))
             return ParsedTransaction(
                 provider = "AIRTEL",
                 transactionType = "REVERSAL",
@@ -294,14 +420,48 @@ object AirtelSmsParser {
             )
         }
 
-        // 10. BALANCE-ONLY NOTIFICATION
+        // 14. REVERSAL VARIANT 2 (AMOUNT FIRST, THEN ORIG TID)
+        // "Reversal of ZMW 100.00 for TID MP261102.1045.Z88102 completed. New balance ZMW 250.90. TID: MP261102.1130.R99102"
+        val pReversal2 = Pattern.compile(
+            "Reversal of (?:ZMW|K)?\\s*([\\d,.]+)\\s*(?:ZMW|K)?\\s*for TID\\s+([A-Za-z0-9._]+)\\s+completed\\.?\\s*New balance\\s*(?:ZMW|K)?\\s*([\\d,.]+)\\.?\\s*TID\\s*:\\s*([A-Za-z0-9._]+)",
+            Pattern.CASE_INSENSITIVE
+        )
+        val mReversal2 = pReversal2.matcher(normalized)
+        if (mReversal2.find()) {
+            val amountMinor = Money.parseToMinor(mReversal2.group(1))
+            val origTid = cleanReference(mReversal2.group(2))
+            val balanceMinor = Money.parseToMinor(mReversal2.group(3))
+            val tid = cleanReference(mReversal2.group(4))
+            return ParsedTransaction(
+                provider = "AIRTEL",
+                transactionType = "REVERSAL",
+                direction = "CREDIT",
+                status = "SUCCESSFUL",
+                categoryName = "Reversal & Refund",
+                amountMinor = amountMinor,
+                balanceAfterMinor = balanceMinor,
+                transactionReference = tid,
+                originalTransactionReference = origTid,
+                rawSms = smsBody,
+                confidence = 0.99f
+            )
+        }
+
+        // 15. BALANCE-ONLY NOTIFICATION
+        // "Dear Customer, your Airtel Money account balance is ZMW 250.90 as at 02/11/2026 12:00:00. Thank you."
         // "Dear Customer, your Airtel Money balance is ZMW 0.90. Thank you."
         val pBalOnly = Pattern.compile(
-            "(?:your )?Airtel Money (?:available )?balance is (?:ZMW|K)?\\s*([\\d,.]+)",
+            "(?:Dear Customer,?\\s*)?(?:your\\s+)?Airtel Money\\s+(?:available\\s+)?(?:account\\s+)?balance is (?:ZMW|K)?\\s*([\\d,.]+)",
             Pattern.CASE_INSENSITIVE
         )
         val mBalOnly = pBalOnly.matcher(normalized)
-        if (mBalOnly.find() && !normalized.contains("sent", ignoreCase = true) && !normalized.contains("withdrawn", ignoreCase = true) && !normalized.contains("paid", ignoreCase = true)) {
+        if (mBalOnly.find() &&
+            !normalized.contains("sent", ignoreCase = true) &&
+            !normalized.contains("withdrawn", ignoreCase = true) &&
+            !normalized.contains("paid", ignoreCase = true) &&
+            !normalized.contains("deposit", ignoreCase = true) &&
+            !normalized.contains("received", ignoreCase = true)
+        ) {
             val balanceMinor = Money.parseToMinor(mBalOnly.group(1))
             return ParsedTransaction(
                 provider = "AIRTEL",
@@ -316,34 +476,43 @@ object AirtelSmsParser {
             )
         }
 
-        // Fallback generic Airtel matcher if format varies slightly
-        if (normalized.contains("TID", ignoreCase = true) &&
-            (normalized.contains("received", ignoreCase = true) ||
-             normalized.contains("sent", ignoreCase = true) ||
-             normalized.contains("payment", ignoreCase = true))
-        ) {
-            val amountPattern = Pattern.compile("(?:ZMW|K)\\s*([\\d,.]+)|([\\d,.]+)\\s*(?:ZMW|K)", Pattern.CASE_INSENSITIVE)
-            val amtMatcher = amountPattern.matcher(normalized)
-            if (amtMatcher.find()) {
-                val amtStr = amtMatcher.group(1) ?: amtMatcher.group(2)
-                val amountMinor = Money.parseToMinor(amtStr)
-                val isIncome = normalized.contains("received", ignoreCase = true)
-                val tidPattern = Pattern.compile("TID\\s*:?\\s*([A-Za-z0-9._]+)", Pattern.CASE_INSENSITIVE)
-                val tidMatcher = tidPattern.matcher(normalized)
-                val tid = if (tidMatcher.find()) cleanReference(tidMatcher.group(1)) else null
-                return ParsedTransaction(
-                    provider = "AIRTEL",
-                    transactionType = if (isIncome) "INCOMING_TRANSFER" else "OUTGOING_TRANSFER",
-                    direction = if (isIncome) "CREDIT" else "DEBIT",
-                    status = "SUCCESSFUL",
-                    categoryName = if (isIncome) "Received Money" else "General Expense",
-                    amountMinor = amountMinor,
-                    transactionReference = tid,
-                    rawSms = smsBody,
-                    confidence = 0.85f,
-                    requiresReview = true,
-                    reviewReason = "Matched via fallback pattern"
-                )
+        // 16. STRICT FALLBACK
+        // Must contain an authentic TID and explicit currency figure and clear financial action
+        val tidPattern = Pattern.compile("TID\\s*[:#]?\\s*([A-Za-z0-9._]+)", Pattern.CASE_INSENSITIVE)
+        val tidMatcher = tidPattern.matcher(normalized)
+        if (tidMatcher.find()) {
+            val tid = cleanReference(tidMatcher.group(1))
+            val hasAction = normalized.contains("received", ignoreCase = true) ||
+                    normalized.contains("sent", ignoreCase = true) ||
+                    normalized.contains("transferred", ignoreCase = true) ||
+                    normalized.contains("payment", ignoreCase = true) ||
+                    normalized.contains("paid", ignoreCase = true) ||
+                    normalized.contains("withdrawn", ignoreCase = true) ||
+                    normalized.contains("deposit", ignoreCase = true)
+
+            if (hasAction && !TransactionWordClassifier.isPromotionalOrSpam(normalized)) {
+                val amountPattern = Pattern.compile("(?:ZMW|K)\\s*([\\d,.]+)|([\\d,.]+)\\s*(?:ZMW|K)", Pattern.CASE_INSENSITIVE)
+                val amtMatcher = amountPattern.matcher(normalized)
+                if (amtMatcher.find()) {
+                    val amtStr = amtMatcher.group(1) ?: amtMatcher.group(2)
+                    val amountMinor = Money.parseToMinor(amtStr)
+                    if (amountMinor > 0) {
+                        val isIncome = normalized.contains("received", ignoreCase = true) || normalized.contains("deposit", ignoreCase = true)
+                        return ParsedTransaction(
+                            provider = "AIRTEL",
+                            transactionType = if (isIncome) "INCOMING_TRANSFER" else "OUTGOING_TRANSFER",
+                            direction = if (isIncome) "CREDIT" else "DEBIT",
+                            status = "SUCCESSFUL",
+                            categoryName = if (isIncome) "Received Money" else "General Expense",
+                            amountMinor = amountMinor,
+                            transactionReference = tid,
+                            rawSms = smsBody,
+                            confidence = 0.85f,
+                            requiresReview = true,
+                            reviewReason = "Matched via verified fallback pattern"
+                        )
+                    }
+                }
             }
         }
 
