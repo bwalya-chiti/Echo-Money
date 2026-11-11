@@ -1,0 +1,6 @@
+{
+  "name": "Echo Money",
+  "description": "Zambia Mobile Money SMS transaction tracker and financial analytics for Airtel and MTN Money.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

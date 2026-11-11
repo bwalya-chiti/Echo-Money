@@ -1,0 +1,1349 @@
+ECHO MONEY
+
+MASTER SYSTEM ENHANCEMENT, FINANCIAL LEDGER, ACCOUNTING ENGINE AND RELIABILITY SPECIFICATION
+
+1. MISSION AND NON-NEGOTIABLE OBJECTIVE
+
+Transform ECHO MONEY into a reliable, intelligent, offline-first personal financial ledger and mobile-money audit system.
+
+The system must automatically capture, interpret, validate, categorize, reconcile and report financial activity from Airtel Money Zambia, MTN Mobile Money Zambia and other supported financial accounts.
+
+It must provide a complete, understandable and traceable picture of the user's financial activity.
+
+This is not simply an SMS reader, expense tracker or dashboard.
+
+It is a personal accounting system with an automated transaction ingestion engine, double-entry financial journal, account reconciliation engine, transaction relationship engine and financial reporting system.
+
+The system must prioritize:
+
+1. Financial accuracy.
+2. Data integrity.
+3. Complete transaction traceability.
+4. Duplicate prevention.
+5. Correct accounting treatment.
+6. Reliable balance calculations.
+7. Recovery from errors and interruptions.
+8. User privacy and data security.
+9. Understandable financial reporting.
+10. Maintainable and testable software architecture.
+
+Never sacrifice accounting correctness for visual appearance or automation convenience.
+
+---
+
+PART A — ENGINEERING RULES AND CHANGE CONTROL
+
+2. INSPECT BEFORE MODIFYING
+
+Before writing or changing code:
+
+- Inspect the complete existing project structure.
+- Identify the programming language, framework and versions.
+- Inspect the existing database and schema.
+- Inspect the SMS receiver and permission implementation.
+- Inspect existing parsers and transaction models.
+- Inspect account and balance calculations.
+- Inspect the dashboard, analytics and navigation.
+- Inspect backup and restore functionality.
+- Identify existing dependencies and potential conflicts.
+- Identify existing bugs and incomplete features.
+
+Produce an implementation assessment before modifying the project.
+
+Do not:
+
+- Rebuild the entire application without justification.
+- Replace working components unnecessarily.
+- Delete existing user data.
+- Change project names or branding.
+- Introduce unnecessary dependencies.
+- Hardcode credentials or financial values.
+- create dummy production transactions.
+- Claim implementation or testing succeeded without evidence.
+
+Maintain the official application name: ECHO MONEY.
+
+Preserve the established dark black-glass design direction.
+
+3. ARCHITECTURAL SEPARATION
+
+Separate the application into clearly defined responsibilities:
+
+1. SMS ingestion.
+2. Raw message storage.
+3. Message normalization.
+4. Provider-specific parsing.
+5. Transaction validation.
+6. Duplicate detection.
+7. Transaction relationship matching.
+8. Accounting and journal posting.
+9. Account balance calculation.
+10. Reconciliation.
+11. Categorization.
+12. Financial reporting.
+13. User interface.
+14. Backup and recovery.
+15. Security and permissions.
+
+Do not combine SMS parsing, balance calculation and dashboard logic into one component.
+
+The interface must never independently calculate financial balances.
+
+All financial totals must come from the accounting and reporting layer.
+
+Use well-defined interfaces between components and make business rules independently testable.
+
+---
+
+PART B — FINANCIAL DATA INTEGRITY
+
+4. USE EXACT FINANCIAL PRECISION
+
+Financial amounts must never depend on binary floating-point arithmetic.
+
+Use integer minor units wherever possible.
+
+For ZMW:
+
+- K1.00 = 100 minor units.
+- K10.50 = 1050 minor units.
+- K0.01 = 1 minor unit.
+
+Alternatively, use a database-supported exact decimal representation with carefully controlled conversion.
+
+Never use ordinary floating-point values for account balances, ledger entries or financial calculations.
+
+Store:
+
+- Currency code.
+- Original amount representation.
+- Normalized amount.
+- Precision.
+- Original SMS text.
+
+Do not silently round transaction values.
+
+Validate that:
+
+- Amounts are positive where required.
+- Currency is recognized.
+- Decimal precision is valid.
+- Amounts fall within configured limits.
+- Zero-value and malformed transactions are handled explicitly.
+
+5. DEFINE A CANONICAL TRANSACTION MODEL
+
+Every recognized financial event must have a stable internal identifier.
+
+Store the following where available:
+
+- Internal transaction ID.
+- Provider.
+- Source account.
+- Destination account, if known.
+- Provider transaction reference.
+- Transaction date and time.
+- Original timezone or offset, if known.
+- Normalized UTC timestamp.
+- Original local timestamp.
+- Amount.
+- Currency.
+- Fee.
+- Transaction direction.
+- Transaction type.
+- Category.
+- Sender.
+- Recipient.
+- Merchant.
+- Transaction status.
+- Provider-reported balance.
+- Parser version.
+- Classification rule.
+- Confidence level.
+- Review status.
+- Original message reference.
+- Related transaction references.
+- Creation timestamp.
+- Last modification timestamp.
+
+Do not invent missing fields.
+
+Represent unavailable values as unknown or null, not zero.
+
+A missing fee is not automatically a zero fee. A fee explicitly reported as zero is different from a fee that was not reported.
+
+6. SEPARATE RAW MESSAGES FROM FINANCIAL TRANSACTIONS
+
+Implement separate records for:
+
+- Raw SMS messages.
+- Parsed message results.
+- Financial transactions.
+- Accounting journal entries.
+- Transaction relationships.
+- Audit events.
+
+A raw SMS is evidence, not automatically a financial transaction.
+
+One transaction may have several SMS descriptions.
+
+One SMS may also contain information about multiple financial events in future provider formats.
+
+Therefore, never enforce a one-message-to-one-transaction assumption.
+
+Preserve the original SMS as received, including the original text and sender information where available.
+
+Never destroy raw evidence when correcting a parsed transaction.
+
+---
+
+PART C — SMS INGESTION AND PARSING RELIABILITY
+
+7. ROBUST SMS INGESTION
+
+Implement reliable Android SMS ingestion.
+
+The ingestion process must:
+
+- Check permissions before attempting to read SMS.
+- Handle permission denial.
+- Handle application restarts.
+- Handle interrupted processing.
+- Prevent concurrent duplicate processing.
+- Support delayed message processing.
+- Support controlled historical imports where permitted.
+- Preserve original message timestamps.
+- Record processing errors.
+- Retry recoverable failures safely.
+
+Never assume SMS messages arrive in chronological order.
+
+Never assume the device is continuously connected to the internet.
+
+Never assume that every message is a valid transaction notification.
+
+Store raw messages before financial posting so that a parser failure does not permanently lose the original evidence.
+
+Implement an ingestion queue or equivalent durable processing mechanism.
+
+A message should have a clear processing state:
+
+- Received.
+- Stored.
+- Parsing.
+- Parsed.
+- Validated.
+- Matched.
+- Posted.
+- Requires review.
+- Failed processing.
+
+Do not mark a message as successfully posted merely because parsing succeeded.
+
+8. PROVIDER-SPECIFIC PARSERS
+
+Build separate, independently testable parsers for Airtel and MTN.
+
+Do not use one large collection of loosely connected regular expressions.
+
+Each parser should identify:
+
+- Provider.
+- Transaction type.
+- Amount.
+- Currency.
+- Date and time.
+- Transaction reference.
+- Counterparty.
+- Merchant.
+- Fee.
+- Balance.
+- Status.
+- Supporting text.
+
+Support different punctuation, spacing, capitalization, apostrophes and timestamp formats.
+
+Examples include:
+
+- "Y'ello"
+- "Y’ello"
+- "Yello"
+- "TID"
+- "Txn. ID"
+- "Financial Transaction ID"
+- "Your new balance"
+- "Your available balance"
+- "Airtel Money bal"
+- "Bal ZMW"
+
+Do not assume that future messages will match today's examples exactly.
+
+Maintain versioned parsing rules and a parser regression test suite.
+
+If a provider changes its message format, old transactions must remain intact.
+
+9. VALIDATION BEFORE POSTING
+
+Before a transaction enters the financial ledger, validate:
+
+1. Provider recognition.
+2. Account identification.
+3. Transaction amount.
+4. Currency.
+5. Reference number, if available.
+6. Transaction timestamp.
+7. Transaction status.
+8. Transaction type.
+9. Accounting treatment.
+10. Duplicate status.
+11. Possible relationship to another transaction.
+
+A transaction with missing but nonessential information may still be recorded with reduced confidence.
+
+A transaction missing essential information must not be automatically posted.
+
+Use explicit states:
+
+- Validated and ready.
+- Posted.
+- Pending classification.
+- Pending relationship confirmation.
+- Failed.
+- Reversed.
+- Partially reversed.
+- Disputed.
+- Excluded from accounting.
+
+The system must distinguish a failed parser from a failed financial transaction.
+
+---
+
+PART D — DEDUPLICATION AND TRANSACTION MATCHING
+
+10. MULTI-LAYER DUPLICATE DETECTION
+
+Implement duplicate detection at several levels.
+
+Level 1: Exact message duplicate
+
+Use provider, sender, timestamp and message fingerprint where available.
+
+Level 2: Provider transaction reference
+
+Use provider-specific transaction identifiers.
+
+Do not assume transaction references are globally unique.
+
+A reference key should be scoped appropriately, such as provider, account and reference.
+
+Level 3: Semantic duplicate
+
+Compare:
+
+- Provider.
+- Amount.
+- Timestamp.
+- Transaction direction.
+- Counterparty.
+- Merchant.
+- Transaction description.
+- Reference number.
+
+Level 4: Cross-provider relationship
+
+Compare Airtel and MTN records to determine whether they describe one transfer between the user's accounts.
+
+A possible duplicate must not automatically be discarded when the evidence is insufficient.
+
+11. TRANSACTION RELATIONSHIP ENGINE
+
+Support relationships including:
+
+- Duplicate descriptions.
+- Internal transfers.
+- External transfers.
+- Payment and reversal.
+- Original transaction and refund.
+- Loan and repayment.
+- Withdrawal and cash movement.
+- Parent transaction and associated fee.
+- Related but separate transactions.
+
+Every relationship must have:
+
+- Relationship type.
+- Source transaction.
+- Destination transaction.
+- Matching evidence.
+- Confidence.
+- Confirmation status.
+
+Use the following statuses:
+
+- Confirmed automatically.
+- Confirmed by user.
+- Probable.
+- Unmatched.
+- Rejected match.
+
+Do not merge records merely because amounts are equal.
+
+Do not merge two transactions solely because they occurred close together.
+
+Do not assume every AIRTEL NFS transaction is an internal transfer.
+
+Where an internal transfer is confirmed, link the two sides of the movement and prevent it from inflating consolidated income or expenditure.
+
+Where only one side of a transfer is available, retain the observed side and mark the other side as unconfirmed.
+
+---
+
+PART E — ACCOUNTING ENGINE
+
+12. DOUBLE-ENTRY BOOKKEEPING
+
+Implement a consistent double-entry accounting journal.
+
+Every posted financial transaction must produce balanced journal entries.
+
+For each journal transaction:
+
+Total debits must equal total credits.
+
+Use account types such as:
+
+- Assets.
+- Liabilities.
+- Equity or opening-balance control.
+- Income.
+- Expenses.
+
+Examples:
+
+Incoming money
+
+- Debit: Mobile-money asset.
+- Credit: Appropriate income or source-clearing account.
+
+Merchant purchase
+
+- Debit: Appropriate expense.
+- Credit: Mobile-money asset.
+
+Internal transfer
+
+- Debit: Destination asset.
+- Credit: Source asset.
+
+Loan received
+
+- Debit: Mobile-money asset.
+- Credit: Loan liability.
+
+Loan repayment
+
+- Debit: Loan liability for the known principal portion.
+- Debit: Interest or fee expense for known applicable charges.
+- Credit: Mobile-money asset for the full repayment.
+
+If the repayment's principal and interest breakdown is unknown, do not fabricate it. Use a loan-repayment clearing or unallocated repayment account and flag the outstanding allocation.
+
+Cash withdrawal
+
+- Debit: Cash asset or cash-withdrawal clearing account.
+- Credit: Mobile-money asset.
+
+If the physical cash receipt cannot be verified, distinguish the withdrawal movement from confirmed cash holdings.
+
+Reversal
+
+- Create entries that reverse the original posted financial effect.
+- Link them to the original journal transaction.
+- Preserve the original record.
+
+13. STRICT ACCOUNTING INVARIANTS
+
+Enforce the following rules at database and application level:
+
+1. Posted journal transactions must always balance.
+2. Every journal entry must reference a valid account.
+3. Posted transactions must not be silently deleted.
+4. Reversals must reference the original transaction.
+5. A transaction must not be posted twice.
+6. An internal transfer must not become income or expenditure.
+7. A loan credit must not become ordinary income.
+8. A withdrawal must not automatically become consumption.
+9. Failed transactions must not alter account balances.
+10. Unclassified events must not enter misleading expenditure totals.
+11. All adjustments must have an explanation and audit record.
+12. Financial reports must be reproducible from the ledger.
+
+Prevent the user interface or ordinary update operations from directly editing posted journal values.
+
+Correct posted records through controlled reversing entries and replacement transactions.
+
+---
+
+PART F — TRANSACTION TYPES AND FINANCIAL MEANING
+
+14. CLASSIFICATION SYSTEM
+
+Support at least the following categories.
+
+Income
+
+- Personal transfers received.
+- Business income.
+- Salary.
+- Rewards.
+- Other income.
+
+Expenses
+
+- Food.
+- Transport.
+- Shopping.
+- Airtime.
+- Internet and data.
+- Utilities.
+- Education.
+- Health.
+- Entertainment.
+- Merchant purchases.
+- Other expenses.
+
+Transfers
+
+- Money sent.
+- Money received.
+- Internal transfers.
+- External transfers.
+- Card movements.
+
+Cash movements
+
+- Cash withdrawal.
+- Cash deposit.
+- Cash transfer.
+- Cash adjustment.
+
+Loans
+
+- Loan proceeds.
+- Principal repayment.
+- Interest.
+- Loan fees.
+- Outstanding liabilities.
+
+Fees
+
+- Transaction fees.
+- Withdrawal charges.
+- Service fees.
+- Other charges.
+
+Adjustments
+
+- Refunds.
+- Reversals.
+- Corrections.
+- Opening balances.
+- Reconciliation adjustments.
+
+A transaction type must be independent of its category.
+
+For example, a merchant payment is a transaction type; groceries are a category.
+
+Support custom categories, user overrides and rules for future classification.
+
+Retain both the original automatic classification and the user's corrected classification.
+
+15. LOAN ACCOUNTING
+
+Support loan records independently from ordinary money transactions.
+
+A loan record should contain:
+
+- Lender.
+- Principal received.
+- Date received.
+- Outstanding principal, if known.
+- Repayments.
+- Interest, if known.
+- Charges, if known.
+- Repayment history.
+- Linked account transactions.
+
+Do not assume that every FIKILIZA repayment belongs to the same loan without sufficient evidence.
+
+Do not infer the outstanding loan balance solely from wallet balances.
+
+Support multiple loans and distinguish NaSova, FIKILIZA and future lending products.
+
+---
+
+PART G — BALANCES AND RECONCILIATION
+
+16. ACCOUNT BALANCE ENGINE
+
+Every account must maintain:
+
+- Opening balance.
+- Opening-balance date.
+- Posted credits.
+- Posted debits.
+- Fees.
+- Reversals.
+- Adjustments.
+- Calculated running balance.
+- Provider-reported balance.
+- Last verified balance.
+- Reconciliation status.
+
+Calculate balances from the journal, not from accumulated SMS text.
+
+Use this accounting relationship:
+
+Closing balance = Opening balance + Posted credits - Posted debits + Signed adjustments.
+
+Ensure that transfers are reflected in the respective account balances.
+
+17. BALANCE RECONCILIATION
+
+When an SMS provides a new balance:
+
+1. Identify the associated account.
+2. Identify the transaction.
+3. Calculate the expected balance immediately after the transaction.
+4. Compare it with the reported balance.
+5. Record the difference.
+6. Investigate missing events, opening balances, fees, duplicates or unrecorded activity.
+7. Display the discrepancy.
+8. Allow a documented reconciliation action.
+
+Never silently overwrite the ledger balance with an SMS balance.
+
+Support historical balances and out-of-order messages.
+
+A balance reported by an SMS must be treated as evidence of the account position at the message's relevant time, not necessarily the account's current balance.
+
+Do not compare a historical provider balance with a current calculated balance.
+
+18. INCOMPLETE HISTORY
+
+The user may install ECHO MONEY after accounts have already been used.
+
+Therefore:
+
+- Support opening balances.
+- Support a configurable historical import period.
+- Allow historical transactions to be imported.
+- Allow the user to identify a verified starting point.
+- Identify missing historical periods.
+- Distinguish complete from incomplete account history.
+- Do not pretend a partial SMS archive is a complete financial history.
+
+A balance reconciliation must not be marked complete unless its evidence and coverage are adequate.
+
+---
+
+PART H — FINANCIAL REPORTING
+
+19. DAILY FINANCIAL STATEMENT
+
+Create a live daily financial report.
+
+Display:
+
+- Opening balance per account.
+- Money received.
+- Earned income.
+- Loan proceeds.
+- Money sent.
+- Actual expenditure.
+- Loan repayments.
+- Cash withdrawals.
+- Fees.
+- Refunds and reversals.
+- Internal transfers.
+- Pending events.
+- Unclassified events.
+- Closing balance per account.
+- Consolidated financial position.
+- Reconciliation differences.
+
+Make the difference between money movement and actual spending obvious.
+
+A transfer is not income merely because it enters another account.
+
+A withdrawal is not proof that money was consumed.
+
+A loan is not earned income.
+
+A refund is not new ordinary income.
+
+20. DAILY NET FLOW DEFINITIONS
+
+Do not use a single ambiguous figure called "net income".
+
+Show clearly defined measures:
+
+Net external cash flow: External credits minus external debits, using clearly documented classifications.
+
+Net earned income: Recognized earned income minus recognized expenses, where the reporting definition supports that comparison.
+
+Net account movement: Total change in the selected account balances, including the effect of transfers and other posted movements.
+
+Actual expenditure: Expenses recognized through the accounting ledger, excluding internal transfers and unspent cash withdrawals.
+
+Show loan proceeds, loan repayments and other liability movements separately.
+
+Never combine unrelated financial measures into one misleading total.
+
+21. HISTORICAL ANALYTICS
+
+Support:
+
+- Daily.
+- Weekly.
+- Monthly.
+- Yearly.
+- Custom date range.
+
+Provide:
+
+- Income breakdown.
+- Expense breakdown.
+- Account activity.
+- Provider comparison.
+- Spending patterns.
+- Cash withdrawals.
+- Loan activity.
+- Fee analysis.
+- Balance trends.
+- Largest transactions.
+- Transaction frequency.
+- Category comparisons.
+- Reconciliation history.
+
+Every chart and summary must be generated from ledger records.
+
+Allow every report figure to open its underlying transactions.
+
+Reports must use consistent date boundaries and the user's configured timezone.
+
+Do not include pending or failed transactions in posted financial totals.
+
+---
+
+PART I — AUDITABILITY AND CORRECTIONS
+
+22. IMMUTABLE AUDIT HISTORY
+
+Maintain a chronological audit log of important actions:
+
+- SMS received.
+- Message parsed.
+- Transaction validated.
+- Transaction posted.
+- Duplicate detected.
+- Relationship created.
+- Transaction categorized.
+- User correction made.
+- Transaction reversed.
+- Reconciliation performed.
+- Opening balance changed.
+- Backup created.
+- Backup restored.
+
+Each audit event should contain:
+
+- Event ID.
+- Event type.
+- Timestamp.
+- Affected record.
+- Previous value, where appropriate.
+- New value, where appropriate.
+- Reason.
+- Actor or application component.
+
+Protect the audit log from ordinary editing and deletion.
+
+Do not expose sensitive raw financial data unnecessarily in diagnostic logs.
+
+23. TRANSACTION CORRECTION WORKFLOW
+
+When a user identifies an incorrect transaction:
+
+1. Open the original transaction.
+2. Display its source SMS.
+3. Display the existing classification and accounting entries.
+4. Allow an authorized correction.
+5. Explain the financial impact.
+6. Create the required reversal or adjustment.
+7. Record the reason.
+8. Recalculate affected reports.
+9. Preserve the original and corrected history.
+
+Never silently replace a transaction's original financial history.
+
+Support undo through compensating entries, not destructive deletion of posted records.
+
+---
+
+PART J — ERROR HANDLING AND RECOVERY
+
+24. FAILURE HANDLING
+
+Every subsystem must have a defined error-handling strategy.
+
+Cover:
+
+- Permission denied.
+- SMS receiver unavailable.
+- Database unavailable.
+- Database full.
+- Malformed SMS.
+- Unknown provider format.
+- Duplicate processing.
+- Invalid transaction reference.
+- Missing timestamp.
+- Unsupported currency.
+- Invalid amount.
+- Conflicting transaction records.
+- Partial reversal.
+- Application crash.
+- Interrupted posting.
+- Failed migration.
+- Failed backup.
+- Failed restore.
+- Corrupted database.
+- Insufficient device storage.
+
+Errors must be logged safely and displayed in understandable language.
+
+Do not swallow exceptions silently.
+
+Do not show technical stack traces to ordinary users.
+
+Provide a diagnostic view for technical troubleshooting without exposing unnecessary private SMS content.
+
+25. ATOMIC OPERATIONS AND IDEMPOTENCY
+
+All financial posting operations must be atomic.
+
+Either all necessary journal entries are committed or none are.
+
+If the application crashes during posting, it must recover without leaving half a transaction.
+
+Use idempotency keys and database constraints to prevent repeated posting.
+
+Reprocessing an already processed SMS must not create additional financial entries.
+
+Implement safe retry logic.
+
+A retry must never create a second financial effect.
+
+26. DATABASE MIGRATION AND RECOVERY
+
+Implement versioned database migrations.
+
+Before changing a financial schema:
+
+- Create or require a verified backup where appropriate.
+- Run migration in a controlled transaction.
+- Validate record counts and financial totals.
+- Verify foreign-key relationships.
+- Check journal balance invariants.
+- Preserve audit history.
+- Provide a recovery strategy.
+
+If migration fails, retain the previous usable database.
+
+Never drop or recreate financial tables simply to resolve a migration problem.
+
+---
+
+PART K — BACKUP, RESTORE AND DATA PORTABILITY
+
+27. SECURE BACKUP
+
+Support:
+
+- Manual backup.
+- Automatic scheduled backup.
+- Full backup.
+- Selective export.
+- Encrypted portable backup.
+- CSV export.
+- JSON export.
+- Excel-compatible export.
+
+Use authenticated encryption and secure key management.
+
+Portable encrypted backups must support password-based encryption with a documented, secure key derivation approach.
+
+Use unique salts and nonces.
+
+Do not hardcode encryption keys.
+
+28. RESTORE VALIDATION
+
+Before restoring:
+
+- Verify file integrity.
+- Verify encryption and password.
+- Validate the backup manifest.
+- Check schema compatibility.
+- Check data consistency.
+- Validate journal balances.
+- Check record counts.
+- Identify possible duplicate data.
+
+Create a safety backup of the current database before replacing it.
+
+Restore to a temporary database first.
+
+Only replace the active database after successful validation.
+
+Use atomic replacement and rollback on failure.
+
+Do not merge restored records into live data unless a separate, explicitly designed and tested merge operation is being used.
+
+Never claim a backup is successful without verifying that it can be read and restored.
+
+---
+
+PART L — USER EXPERIENCE
+
+29. NAVIGATION
+
+Maintain the established ECHO MONEY design.
+
+Main navigation:
+
+1. Overview.
+2. Ledger.
+3. Analytics.
+4. Accounts.
+5. Settings.
+
+The interface must be understandable to users without accounting knowledge.
+
+30. OVERVIEW
+
+Show:
+
+- Consolidated account position.
+- Individual account balances.
+- Today's income.
+- Today's expenditure.
+- Net external cash flow.
+- Fees.
+- Loan obligations, where known.
+- Recent activity.
+- Pending reviews.
+- Reconciliation alerts.
+
+31. LEDGER
+
+Provide an audit-style register with:
+
+- Date.
+- Account.
+- Description.
+- Category.
+- Type.
+- Reference.
+- Debit.
+- Credit.
+- Fee.
+- Running balance.
+- Status.
+
+Allow filtering and searching.
+
+Opening an item must reveal the complete financial history and original evidence.
+
+32. REVIEW CENTRE
+
+Create a dedicated review centre for:
+
+- Unclassified messages.
+- Ambiguous transactions.
+- Possible duplicates.
+- Unmatched internal transfers.
+- Balance discrepancies.
+- Uncertain loan allocations.
+- Unsupported transaction formats.
+
+Make it easy to resolve these cases without changing unrelated financial data.
+
+33. DAILY CLOSING REPORT
+
+At any time, the user must be able to generate a daily financial statement.
+
+It must explain:
+
+- What entered the accounts.
+- What left the accounts.
+- What was actually spent.
+- What was transferred.
+- What was withdrawn.
+- What was borrowed.
+- What was repaid.
+- What was reversed.
+- What remains unresolved.
+- Whether the balances reconcile.
+
+Provide a plain-language interpretation alongside the figures.
+
+---
+
+PART M — SECURITY AND PRIVACY
+
+34. LOCAL-FIRST SECURITY
+
+Keep financial data local by default.
+
+Do not transmit SMS messages or financial transaction records to external AI services.
+
+Implement:
+
+- Appropriate database encryption.
+- Android Keystore-backed key protection.
+- PIN or biometric access.
+- Secure backup handling.
+- Permission transparency.
+- User-controlled data deletion.
+- Secure temporary files.
+- Sensitive-log redaction.
+
+Never request or store Airtel or MTN mobile-money PINs.
+
+Never implement functions that initiate payments or transfers.
+
+Clearly explain the Android SMS permissions required.
+
+Respect Android platform restrictions and applicable app distribution policies.
+
+---
+
+PART N — TESTING AND QUALITY ASSURANCE
+
+35. TEST PYRAMID
+
+Create:
+
+Unit tests
+
+- Provider parsers.
+- Date and amount extraction.
+- Classification.
+- Duplicate detection.
+- Relationship matching.
+- Accounting calculations.
+- Reversal calculations.
+- Balance reconciliation.
+
+Integration tests
+
+- SMS ingestion to raw storage.
+- Parsing to validation.
+- Validation to posting.
+- Posting to running balance.
+- Reversal to corrected balance.
+- Backup and restore.
+- Database migrations.
+
+End-to-end tests
+
+- Permission granted and denied.
+- SMS received.
+- Transaction appears in ledger.
+- Dashboard updates.
+- Duplicate is detected.
+- Daily statement is updated.
+- Reconciliation alert appears.
+- Backup and restore succeeds.
+
+Failure tests
+
+- Crash during processing.
+- Duplicate message delivery.
+- Out-of-order messages.
+- Database write failure.
+- Corrupt backup.
+- Wrong password.
+- Interrupted restore.
+- Missing historical records.
+- Unknown SMS format.
+
+36. REQUIRED FINANCIAL TESTS
+
+Use the supplied Airtel and MTN messages as regression fixtures, appropriately protecting the user's private information.
+
+Include:
+
+- K2,000 Airtel incoming transfer.
+- K181.67 FIKILIZA repayment.
+- K148 NaSova loan credit.
+- K1.82 Airtel Rewards credit.
+- K109 Konza Loan payment.
+- Airtel withdrawal examples.
+- K15, K35 and K145 Airtel NFS duplicate descriptions.
+- K20 and K45 MTN NFS duplicate descriptions.
+- K5 Airtel payment and subsequent reversal.
+- MTN data bundle payments.
+- MTN airtime payments.
+- MTN withdrawals.
+- MTN person-to-person transfer.
+- Global Pay Mastercard-related payment.
+- Failed Airtel transactions.
+- Repeated MTN K30 message.
+- Historical September transaction.
+- Out-of-order messages.
+- Missing opening balance.
+- Unmatched cross-provider transfer.
+
+Do not use redacted or masked values as if they were complete transaction references.
+
+Use synthetic fixtures for any missing or sensitive test data.
+
+37. PROPERTY-BASED AND INVARIANT TESTING
+
+Test the financial system with many generated transaction combinations.
+
+Verify:
+
+- Total debits always equal total credits for every posted journal transaction.
+- A transaction cannot be posted twice.
+- Reprocessing messages does not alter financial totals.
+- Reversing a transaction restores its original net accounting effect.
+- A failed transaction never changes the balance.
+- Internal transfers have zero consolidated net external flow.
+- Account balances equal opening balances plus posted journal movements.
+- Historical reports remain reproducible.
+- Backup and restore preserve all financial relationships.
+- Every posted transaction is traceable to its evidence or documented manual origin.
+
+Test boundary cases such as zero values, large values, decimal precision, date transitions and empty datasets.
+
+---
+
+PART O — PERFORMANCE AND MAINTAINABILITY
+
+38. PERFORMANCE REQUIREMENTS
+
+Design for growing transaction history.
+
+- Avoid loading the complete ledger into memory.
+- Use database indexes for common searches.
+- Paginate transaction history.
+- Cache only derived data that can be safely invalidated.
+- Recalculate affected summaries when possible.
+- Use background processing for nonurgent operations.
+- Avoid blocking the user interface during imports or reports.
+- Keep SMS ingestion lightweight.
+- Prevent repeated full-database scans for each new message.
+
+Maintain acceptable performance on ordinary Android devices.
+
+39. OBSERVABILITY
+
+Implement internal diagnostics showing:
+
+- Messages received.
+- Messages parsed.
+- Transactions posted.
+- Duplicates detected.
+- Transactions awaiting review.
+- Failed processing attempts.
+- Balance discrepancies.
+- Last successful backup.
+- Database integrity status.
+
+Do not expose private transaction information in telemetry.
+
+---
+
+PART P — IMPLEMENTATION CONTROL
+
+40. REQUIRED IMPLEMENTATION PHASES
+
+Do not implement the entire specification in one uncontrolled code-generation operation.
+
+Proceed in verified phases.
+
+PHASE 0 — PROJECT AUDIT
+
+Inspect the existing repository, database, SMS handling, parser, UI, dependencies and tests.
+
+Deliver:
+
+- Existing architecture report.
+- Identified defects.
+- Risk register.
+- Proposed changes.
+- Migration plan.
+- Test plan.
+
+Do not modify files until the inspection is complete.
+
+PHASE 1 — DATA FOUNDATION
+
+Implement:
+
+- Canonical data models.
+- Raw SMS storage.
+- Database constraints.
+- Versioned migrations.
+- Audit events.
+- Exact financial amount handling.
+
+PHASE 2 — PARSING AND INGESTION
+
+Implement:
+
+- Airtel parser.
+- MTN parser.
+- Durable ingestion.
+- Validation.
+- Processing states.
+- Parser regression tests.
+
+PHASE 3 — DEDUPLICATION AND MATCHING
+
+Implement:
+
+- Exact duplicate detection.
+- Reference matching.
+- Semantic matching.
+- Cross-provider relationship engine.
+- Manual review.
+
+PHASE 4 — ACCOUNTING ENGINE
+
+Implement:
+
+- Chart of accounts.
+- Double-entry journal.
+- Transaction posting.
+- Reversals.
+- Fees.
+- Loans.
+- Cash movements.
+- Internal transfers.
+- Balance calculations.
+
+PHASE 5 — RECONCILIATION
+
+Implement:
+
+- Opening balances.
+- Provider-reported balances.
+- Historical reconciliation.
+- Discrepancy detection.
+- Adjustment workflow.
+
+PHASE 6 — LEDGER AND REPORTING
+
+Implement:
+
+- Audit-style transaction register.
+- Daily statement.
+- Weekly and monthly reports.
+- Category analysis.
+- Account-level reporting.
+- Transaction drill-down.
+
+PHASE 7 — USER EXPERIENCE
+
+Implement:
+
+- Overview.
+- Ledger.
+- Analytics.
+- Accounts.
+- Review centre.
+- Settings.
+- Daily closing report.
+
+PHASE 8 — SECURITY AND RECOVERY
+
+Implement:
+
+- Encryption.
+- Authentication.
+- Backup.
+- Restore.
+- Export.
+- Migration recovery.
+
+PHASE 9 — FINAL QUALITY ASSURANCE
+
+Run:
+
+- All unit tests.
+- All integration tests.
+- All end-to-end tests.
+- Database integrity checks.
+- Financial invariants.
+- Backup restoration tests.
+- Performance tests.
+
+Provide a final implementation report.
+
+41. PHASE COMPLETION GATES
+
+A phase is not complete merely because code was generated.
+
+For each phase, report:
+
+1. What was inspected.
+2. What was changed.
+3. Files created.
+4. Files modified.
+5. Database changes.
+6. Dependencies added or removed.
+7. Tests executed.
+8. Tests passed.
+9. Tests failed.
+10. Outstanding issues.
+11. Risks to existing data.
+12. Next phase readiness.
+
+Do not proceed to a dependent phase when a critical financial integrity test fails.
+
+Do not hide failed tests or substitute screenshots for functional evidence.
+
+42. FINAL ACCEPTANCE CONDITIONS
+
+ECHO MONEY is ready only when:
+
+- SMS messages can be captured reliably.
+- Transactions can be recognized correctly.
+- Duplicates do not inflate balances.
+- Related Airtel and MTN movements can be identified.
+- Uncertain matches are reviewable.
+- Financial journal entries balance.
+- Account balances are calculated correctly.
+- Failed transactions do not affect balances.
+- Reversals work correctly.
+- Loan proceeds and repayments are correctly distinguished.
+- Withdrawals are not misrepresented as consumption.
+- Daily reports agree with the ledger.
+- Every reported figure can be traced to underlying entries.
+- Reconciliation discrepancies are visible.
+- Database migrations preserve existing data.
+- Backup and restore have been tested.
+- The system recovers safely from interrupted processing.
+- All critical financial tests pass.
+
+FINAL DEVELOPMENT PRINCIPLE
+
+Build ECHO MONEY as an accounting system first, an automated SMS tracker second, and a visual dashboard third.
+
+The ledger is the source of truth. The original SMS is evidence. The accounting engine determines financial effects. The reconciliation engine tests correctness. The reporting engine explains the result.
+
+Accuracy, traceability and recoverability are mandatory.
