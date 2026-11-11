@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -90,11 +91,17 @@ fun AnalyticsScreen(
     val chartPoints: List<Map.Entry<String, Double>> = dailyMap.entries.toList().takeLast(7)
 
     AtmosphericGlassBackground {
-        LazyColumn(
+        Box(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 640.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Header
             item {
                 Column {
@@ -202,8 +209,8 @@ fun AnalyticsScreen(
                                     .fillMaxWidth()
                                     .height(130.dp)
                             ) {
-                                val barWidth = 26.dp.toPx()
-                                val spacing = (size.width - (chartPoints.size * barWidth)) / (chartPoints.size + 1)
+                                val barWidth = ((size.width * 0.70f) / chartPoints.size.coerceAtLeast(1)).coerceIn(12.dp.toPx(), 26.dp.toPx())
+                                val spacing = ((size.width - (chartPoints.size * barWidth)) / (chartPoints.size + 1)).coerceAtLeast(4.dp.toPx())
 
                                 chartPoints.forEachIndexed { index, entry ->
                                     val x = spacing + index * (barWidth + spacing)
@@ -291,11 +298,11 @@ fun AnalyticsScreen(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            CarrierStatItem("Airtel Money", airtelSpending, airtelPct, AirtelRed)
-                            CarrierStatItem("MTN MoMo", mtnSpending, mtnPct, MtnYellow)
-                            CarrierStatItem("Cash Outflow", cashSpending, cashPct, CashTeal)
+                            CarrierStatItem("Airtel", airtelSpending, airtelPct, AirtelRed, Modifier.weight(1f))
+                            CarrierStatItem("MTN", mtnSpending, mtnPct, MtnYellow, Modifier.weight(1f))
+                            CarrierStatItem("Cash", cashSpending, cashPct, CashTeal, Modifier.weight(1f))
                         }
                     }
                 }
@@ -369,21 +376,28 @@ fun AnalyticsScreen(
         }
     }
 }
+}
 
 @Composable
-private fun CarrierStatItem(label: String, amount: Double, pct: Int, color: Color) {
-    Column {
+private fun CarrierStatItem(
+    label: String,
+    amount: Double,
+    pct: Int,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(9.dp)
+                    .size(8.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(color)
             )
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(label, color = SubtleGrey, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(label, color = SubtleGrey, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(modifier = Modifier.height(3.dp))
-        Text("ZMW ${"%,.2f".format(amount)} ($pct%)", color = OffWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("ZMW ${"%,.0f".format(amount)} ($pct%)", color = OffWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

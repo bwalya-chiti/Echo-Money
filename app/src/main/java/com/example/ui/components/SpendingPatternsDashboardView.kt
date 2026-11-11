@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -368,18 +370,18 @@ fun SpendingPatternsDashboardView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Total Outflow", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                    Text("ZMW ${"%,.2f".format(total30DaySpending)}", color = SoftWhite, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Total Outflow", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("ZMW ${"%,.2f".format(total30DaySpending)}", color = SoftWhite, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0x22FFFFFF)))
-                Column {
-                    Text("Daily Average", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                    Text("ZMW ${"%,.2f".format(dailyAverage)}", color = NeonCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp)) {
+                    Text("Daily Average", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("ZMW ${"%,.2f".format(dailyAverage)}", color = NeonCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0x22FFFFFF)))
-                Column {
-                    Text("Top Category", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    Text("Top Category", color = SubtleGrey, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(topCategory?.name ?: "None", color = ElectricIndigoLight, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -662,152 +664,172 @@ private fun ActiveDonutChartView(
 ) {
     val activeItem = categories.firstOrNull { it.id == selectedCategoryName }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(230.dp),
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(
+        val chartDiameter = (maxWidth * 0.65f).coerceIn(160.dp, 220.dp)
+        val containerHeight = chartDiameter + 16.dp
+
+        Box(
             modifier = Modifier
-                .size(220.dp)
-                .pointerInput(categories, totalSpending) {
-                    detectTapGestures { offset ->
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val dx = offset.x - center.x
-                        val dy = offset.y - center.y
-                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
-                        val innerR = (size.width / 2f) * 0.52f
-                        val outerR = (size.width / 2f) * 0.95f
+                .fillMaxWidth()
+                .height(containerHeight),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .size(chartDiameter)
+                    .pointerInput(categories, totalSpending) {
+                        detectTapGestures { offset ->
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val dx = offset.x - center.x
+                            val dy = offset.y - center.y
+                            val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+                            val innerR = (size.width / 2f) * 0.52f
+                            val outerR = (size.width / 2f) * 0.95f
 
-                        if (distance in innerR..outerR) {
-                            var angle = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
-                            if (angle < 0) angle += 360f
+                            if (distance in innerR..outerR) {
+                                var angle = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                                if (angle < 0) angle += 360f
 
-                            var currentAngle = 0f
-                            for (cat in categories) {
-                                val sweep = cat.percentage * 360f
-                                if (angle in currentAngle..(currentAngle + sweep)) {
-                                    onSelectCategory(cat.id)
-                                    break
+                                var currentAngle = 0f
+                                for (cat in categories) {
+                                    val sweep = cat.percentage * 360f
+                                    if (angle in currentAngle..(currentAngle + sweep)) {
+                                        onSelectCategory(cat.id)
+                                        break
+                                    }
+                                    currentAngle += sweep
                                 }
-                                currentAngle += sweep
                             }
                         }
                     }
-                }
-        ) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val baseRadius = (size.width / 2f) * 0.72f
-            val baseStrokeWidth = 24.dp.toPx()
+            ) {
+                val center = Offset(size.width / 2f, size.height / 2f)
+                val baseRadius = (size.width / 2f) * 0.72f
+                val baseStrokeWidth = (size.width * 0.11f).coerceIn(16.dp.toPx(), 24.dp.toPx())
 
-            var startAngle = -90f
+                var startAngle = -90f
 
-            categories.forEach { cat ->
-                val isSelected = cat.id == selectedCategoryName
-                val sweepAngle = cat.percentage * 360f * animationProgress
+                categories.forEach { cat ->
+                    val isSelected = cat.id == selectedCategoryName
+                    val sweepAngle = cat.percentage * 360f * animationProgress
 
-                val strokeWidth = if (isSelected) baseStrokeWidth * 1.35f else baseStrokeWidth
-                val radiusOffset = if (isSelected) 6.dp.toPx() else 0f
+                    val strokeWidth = if (isSelected) baseStrokeWidth * 1.35f else baseStrokeWidth
+                    val radiusOffset = if (isSelected) 6.dp.toPx() else 0f
 
-                // Active glow for selected slice
-                if (isSelected) {
+                    // Active glow for selected slice
+                    if (isSelected) {
+                        drawArc(
+                            color = cat.color.copy(alpha = 0.35f),
+                            startAngle = startAngle + 1f,
+                            sweepAngle = (sweepAngle - 2f).coerceAtLeast(1f),
+                            useCenter = false,
+                            topLeft = Offset(center.x - baseRadius - radiusOffset - 6.dp.toPx(), center.y - baseRadius - radiusOffset - 6.dp.toPx()),
+                            size = Size((baseRadius + radiusOffset + 6.dp.toPx()) * 2, (baseRadius + radiusOffset + 6.dp.toPx()) * 2),
+                            style = Stroke(width = strokeWidth + 12.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
+
+                    // Sliced Arc
                     drawArc(
-                        color = cat.color.copy(alpha = 0.35f),
-                        startAngle = startAngle + 1f,
-                        sweepAngle = (sweepAngle - 2f).coerceAtLeast(1f),
+                        brush = cat.gradient,
+                        startAngle = startAngle + 1.5f,
+                        sweepAngle = (sweepAngle - 3f).coerceAtLeast(1f),
                         useCenter = false,
-                        topLeft = Offset(center.x - baseRadius - radiusOffset - 6.dp.toPx(), center.y - baseRadius - radiusOffset - 6.dp.toPx()),
-                        size = Size((baseRadius + radiusOffset + 6.dp.toPx()) * 2, (baseRadius + radiusOffset + 6.dp.toPx()) * 2),
-                        style = Stroke(width = strokeWidth + 12.dp.toPx(), cap = StrokeCap.Round)
+                        topLeft = Offset(center.x - baseRadius - radiusOffset, center.y - baseRadius - radiusOffset),
+                        size = Size((baseRadius + radiusOffset) * 2, (baseRadius + radiusOffset) * 2),
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                     )
+
+                    startAngle += cat.percentage * 360f
                 }
 
-                // Sliced Arc
-                drawArc(
-                    brush = cat.gradient,
-                    startAngle = startAngle + 1.5f,
-                    sweepAngle = (sweepAngle - 3f).coerceAtLeast(1f),
-                    useCenter = false,
-                    topLeft = Offset(center.x - baseRadius - radiusOffset, center.y - baseRadius - radiusOffset),
-                    size = Size((baseRadius + radiusOffset) * 2, (baseRadius + radiusOffset) * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                // Inner dark glass core circle
+                drawCircle(
+                    color = Color(0xCC0E0E14),
+                    radius = baseRadius - (baseStrokeWidth / 2f) - 6.dp.toPx(),
+                    center = center
                 )
-
-                startAngle += cat.percentage * 360f
+                drawCircle(
+                    color = GlassBorderTop,
+                    radius = baseRadius - (baseStrokeWidth / 2f) - 6.dp.toPx(),
+                    center = center,
+                    style = Stroke(width = 1.dp.toPx())
+                )
             }
 
-            // Inner dark glass core circle
-            drawCircle(
-                color = Color(0xCC0E0E14),
-                radius = baseRadius - (baseStrokeWidth / 2f) - 6.dp.toPx(),
-                center = center
-            )
-            drawCircle(
-                color = GlassBorderTop,
-                radius = baseRadius - (baseStrokeWidth / 2f) - 6.dp.toPx(),
-                center = center,
-                style = Stroke(width = 1.dp.toPx())
-            )
-        }
-
-        // Center Callout (Displays active category metrics or total 30-day sum)
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        ) {
-            if (activeItem != null) {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(activeItem.color.copy(alpha = 0.25f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(activeItem.icon, contentDescription = null, tint = activeItem.color, modifier = Modifier.size(13.dp))
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = activeItem.name,
-                    color = SoftWhite,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "ZMW ${"%,.2f".format(activeItem.totalAmount)}",
-                    color = activeItem.color,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Text(
-                    text = "${(activeItem.percentage * 100).toInt()}% of 30D spend",
-                    color = SubtleGrey,
-                    fontSize = 9.sp
-                )
-            } else {
-                Text(
-                    text = "30-DAY OUTFLOW",
-                    color = SubtleGrey,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
-                Text(
-                    text = "ZMW ${"%,.0f".format(totalSpending)}",
-                    color = SoftWhite,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TouchApp, contentDescription = null, tint = ElectricIndigoLight, modifier = Modifier.size(10.dp))
-                    Spacer(modifier = Modifier.width(3.dp))
+            // Center Callout (Displays active category metrics or total 30-day sum)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .widthIn(max = chartDiameter * 0.65f)
+                    .padding(horizontal = 4.dp)
+            ) {
+                if (activeItem != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(activeItem.color.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(activeItem.icon, contentDescription = null, tint = activeItem.color, modifier = Modifier.size(13.dp))
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Tap slice to inspect",
-                        color = ElectricIndigoLight,
-                        fontSize = 9.sp
+                        text = activeItem.name,
+                        color = SoftWhite,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = "ZMW ${"%,.2f".format(activeItem.totalAmount)}",
+                        color = activeItem.color,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${(activeItem.percentage * 100).toInt()}% of 30D spend",
+                        color = SubtleGrey,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    Text(
+                        text = "30-DAY OUTFLOW",
+                        color = SubtleGrey,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "ZMW ${"%,.0f".format(totalSpending)}",
+                        color = SoftWhite,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.TouchApp, contentDescription = null, tint = ElectricIndigoLight, modifier = Modifier.size(10.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "Tap slice to inspect",
+                            color = ElectricIndigoLight,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -1154,7 +1176,10 @@ private fun CategoryBreakdownCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
                             .size(34.dp)
@@ -1165,34 +1190,44 @@ private fun CategoryBreakdownCard(
                         Icon(item.icon, contentDescription = null, tint = item.color, modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
                         Text(
                             text = item.name,
                             color = SoftWhite,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         val avg = if (item.transactionCount > 0) item.totalAmount / item.transactionCount else 0.0
                         Text(
-                            text = "${item.transactionCount} transactions • Avg ZMW ${"%,.2f".format(avg)}",
+                            text = "${item.transactionCount} txns • Avg ZMW ${"%,.2f".format(avg)}",
                             color = SubtleGrey,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "ZMW ${"%,.2f".format(item.totalAmount)}",
                         color = SoftWhite,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "${(item.percentage * 100).toInt()}% of total",
                         color = item.color,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

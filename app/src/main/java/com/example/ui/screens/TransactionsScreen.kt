@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -83,7 +84,15 @@ fun TransactionsScreen(
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     AtmosphericGlassBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 640.dp)
+            ) {
             // Glass Top Bar with Search & Filters
             Column(
                 modifier = Modifier
@@ -255,6 +264,7 @@ fun TransactionsScreen(
         }
     }
 }
+}
 
 @Composable
 fun TransactionListItem(
@@ -320,7 +330,7 @@ fun TransactionListItem(
             ) {
                 ProviderBadge(provider = transaction.provider)
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f, fill = false)) {
                     Text(
                         text = title,
                         color = if (isFailed) MutedSilver else OffWhite,

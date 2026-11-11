@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -63,11 +64,17 @@ fun AccountsScreen(
     val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ENGLISH)
 
     AtmosphericGlassBackground {
-        LazyColumn(
+        Box(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 640.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             item {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -156,6 +163,7 @@ fun AccountsScreen(
         }
     }
 }
+}
 
 @Composable
 private fun AccountGlassReconciliationCard(
@@ -185,13 +193,17 @@ private fun AccountGlassReconciliationCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     ProviderBadge(provider = provider)
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text(accountName, color = OffWhite, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(accountName, color = OffWhite, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 if (lastUpdate != null) {
-                    Text("Updated $lastUpdate", color = SubtleGrey, fontSize = 10.sp)
+                    Text("Updated $lastUpdate", color = SubtleGrey, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
 

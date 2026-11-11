@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
@@ -91,67 +92,80 @@ fun DashboardScreen(
     val sdf = SimpleDateFormat("dd MMM, HH:mm", Locale.ENGLISH)
 
     AtmosphericGlassBackground {
-        LazyColumn(
+        Box(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentAlignment = Alignment.TopCenter
         ) {
-            // App Header — ECHO MONEY
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0x3314141E))
-                                .border(1.dp, GlassBorderTop, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 640.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // App Header — ECHO MONEY
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f, fill = false),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.echo_money_icon_1793380992762),
-                                contentDescription = "Echo Money Emblem",
+                            Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "ECHO",
-                                    color = SoftWhite,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.5.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "MONEY",
-                                    color = ElectricIndigo,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 1.5.sp
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0x3314141E))
+                                    .border(1.dp, GlassBorderTop, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.echo_money_icon_1793380992762),
+                                    contentDescription = "Echo Money Emblem",
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(RoundedCornerShape(10.dp)),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
-                            Text(
-                                text = "Black Obsidian Mobile Money Tracker",
-                                color = MutedSilver,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Normal
-                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "ECHO",
+                                        color = SoftWhite,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 1.5.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "MONEY",
+                                        color = ElectricIndigo,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 1.5.sp
+                                    )
+                                }
+                                Text(
+                                    text = "Black Obsidian Mobile Money Tracker",
+                                    color = MutedSilver,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
-                    }
 
-                    // Frosted Glass SMS Listener Status Badge
-                    val statusBorder = if (state.isSmsPermissionGranted) RestrainedGreen.copy(alpha = 0.5f) else RestrainedRed.copy(alpha = 0.5f)
-                    val statusBg = if (state.isSmsPermissionGranted) Color(0x2010B981) else Color(0x20EF4444)
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Frosted Glass SMS Listener Status Badge
+                        val statusBorder = if (state.isSmsPermissionGranted) RestrainedGreen.copy(alpha = 0.5f) else RestrainedRed.copy(alpha = 0.5f)
+                        val statusBg = if (state.isSmsPermissionGranted) Color(0x2010B981) else Color(0x20EF4444)
 
                     Box(
                         modifier = Modifier
@@ -703,6 +717,7 @@ fun DashboardScreen(
             }
         }
     }
+}
 }
 
 @Composable

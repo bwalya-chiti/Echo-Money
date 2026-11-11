@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -69,47 +71,57 @@ fun ReviewCentreScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Pending Reviews (${uiState.reviewItems.size})", "Discrepancies (${uiState.discrepancies.size})")
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF050505))
-            .padding(16.dp)
-            .testTag("review_centre_screen")
+            .background(Color(0xFF050505)),
+        contentAlignment = Alignment.TopCenter
     ) {
-        // Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 640.dp)
+                .padding(16.dp)
+                .testTag("review_centre_screen")
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(ElectricIndigo.copy(alpha = 0.15f), CircleShape)
-                    .border(1.dp, ElectricIndigo.copy(alpha = 0.4f), CircleShape),
-                contentAlignment = Alignment.Center
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = "Review Centre",
-                    tint = ElectricIndigo,
-                    modifier = Modifier.size(22.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(ElectricIndigo.copy(alpha = 0.15f), CircleShape)
+                        .border(1.dp, ElectricIndigo.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Review Centre",
+                        tint = ElectricIndigo,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = "Review Centre",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Audit unclassified activity, discrepancies & ambiguous transfers",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Review Centre",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Audit unclassified activity, discrepancies & ambiguous transfers",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp
-                )
-            }
-        }
 
         // Tabs
         TabRow(
@@ -188,6 +200,7 @@ fun ReviewCentreScreen(
             }
         }
     }
+}
 }
 
 @Composable

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.Alignment
 import com.example.ui.theme.SubtleGrey
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -244,7 +245,8 @@ fun MainContent(viewModel: EchoMoneyViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
             when (currentTab) {
                 NavigationTab.DASHBOARD -> DashboardScreen(

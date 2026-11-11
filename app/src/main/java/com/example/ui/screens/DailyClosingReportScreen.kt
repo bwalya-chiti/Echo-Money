@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CheckCircle
@@ -56,52 +58,62 @@ fun DailyClosingReportScreen(
     val sdf = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.ENGLISH)
     val dateStr = sdf.format(Date(statement?.dateTimestamp ?: System.currentTimeMillis()))
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF050505))
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .testTag("daily_closing_report_screen")
+            .background(Color(0xFF050505)),
+        contentAlignment = Alignment.TopCenter
     ) {
-        // Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 640.dp)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .testTag("daily_closing_report_screen")
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(ElectricIndigo.copy(alpha = 0.15f), CircleShape)
-                    .border(1.dp, ElectricIndigo.copy(alpha = 0.4f), CircleShape),
-                contentAlignment = Alignment.Center
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Assessment,
-                    contentDescription = "Daily Statement",
-                    tint = ElectricIndigo,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Daily Financial Statement",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = dateStr,
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(
-                onClick = onRefresh,
-                modifier = Modifier.testTag("refresh_daily_statement")
-            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(ElectricIndigo.copy(alpha = 0.15f), CircleShape)
+                        .border(1.dp, ElectricIndigo.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Assessment,
+                        contentDescription = "Daily Statement",
+                        tint = ElectricIndigo,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = "Daily Financial Statement",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = dateStr,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.testTag("refresh_daily_statement")
+                ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh",
@@ -315,6 +327,7 @@ fun DailyClosingReportScreen(
             }
         }
     }
+}
 }
 
 @Composable
